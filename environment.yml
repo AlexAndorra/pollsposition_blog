@@ -1,0 +1,24 @@
+name: pp-website
+channels:
+  - conda-forge
+dependencies:
+  - arviz
+  - black
+  - bokeh
+  - fiona
+  - flask
+  - geopandas
+  - jupyterlab
+  - libblas=*=*mkl
+  - lxml
+  - matplotlib
+  - mkl-service
+  - numpy
+  - openpyxl
+  - pandas
+  - pip
+  - pymc3
+  - python-graphviz
+  - scipy
+  - shapely
+  - xlrd

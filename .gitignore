@@ -8,7 +8,14 @@ _site
 *.xml
 vendor
 _notebooks/.ipynb_checkpoints
+
 # Local Netlify folder
 .netlify
 .tweet-cache
 __pycache__
+
+# PyCharm
+.idea/
+
+# MacOs hidden files
+.DS_Store

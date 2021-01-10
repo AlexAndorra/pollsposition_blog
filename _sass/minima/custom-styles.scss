@@ -3,7 +3,6 @@
 @import "minima/fastpages-styles";
 
 
-
 /*-----------------------------------*/
 /*----- ADD YOUR STYLES BELOW -------*/
 
@@ -13,7 +12,7 @@
 body {
   background-color: #f2f2f2;
   font-size: 1rem;
-  color: #212529;
+  color: #212529 !important;
   font-family: 'Lato', 'Raleway', 'Quicksand', 'Lora', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans serif !important;
 }
 
@@ -28,8 +27,22 @@ h1, h2, h3, h4, h5, h6 {
 
 .navbar {
   background-color: #11436e;
-  color: #f2f2f2;
   font-family: 'Arvo', 'ChunkFive', 'Chivo', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, serif;
+  a {
+    color: #ffffff;
+  }
+}
+
+.my-brand {
+  margin-left: 0.25rem;
+  line-height: 1.8;
+  font-weight: 800;
+  font-size: 1.3rem;
+}
+
+a:hover, a:active {
+  color: #ff7f00 !important;
+  text-decoration: none !important;
 }
 
 // If you want to turn off dark background for syntax highlighting, comment or delete the below line.

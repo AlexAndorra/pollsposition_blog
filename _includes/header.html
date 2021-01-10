@@ -2,13 +2,13 @@
 {%- assign page_paths = site.header_pages | default: default_paths -%}
 
 <!-- Navigation -->
-<nav class="navbar navbar-expand-lg fixed-top">
+<nav class="navbar navbar-expand-lg fixed-top py-1">
     <div class="container">
-        <a class="navbar-brand" rel="author" href="{{ '/' | relative_url }}">
+        <a class="navbar-brand py-1" rel="author" href="{{ '/' | relative_url }}">
             <img src="{{ '/images/logo.png'|relative_url }}"
-                 class="img-fluid d-inline-block align-top" width="40" height="40" alt=""
+                 class="d-inline-block align-top" width="40" height="40" alt=""
             >
-            {{ site.title | escape }}
+            <span class="my-brand">{{ site.title | escape }}</span>
         </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse"
                 data-target="#navbarResponsive"

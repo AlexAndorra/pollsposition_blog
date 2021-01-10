@@ -9,6 +9,40 @@
 /* include Google Web fonts: */
 @import url('https://fonts.googleapis.com/css?family=Lato|Raleway|Quicksand|Arvo|ChunkFive|Chivo|Quattrocento|Quattrocento+Sans');
 
+.navbar {
+  background-color: #11436e;
+  font-size: 1rem;
+  font-weight: 800;
+  font-family: 'Arvo', 'ChunkFive', 'Chivo', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, serif;
+  a {
+    color: #ffffff !important;
+  }
+}
+.navbar-toggler {
+  font-size: 12px !important;
+  padding: 13px !important;
+  color: #11436e !important;
+  background-color: #a7cef1 !important;
+}
+.my-brand {
+  margin-left: 0.25rem;
+  line-height: 1.8;
+  font-size: 1.4rem;
+}
+
+a {
+  color: #1e73be !important;
+}
+a:hover, a:active {
+  color: #ff7f00 !important;
+  text-decoration: none !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  font-family: 'Arvo', 'ChunkFive', 'Chivo', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, serif;
+}
+
 body {
   background-color: #f2f2f2;
   font-size: 1rem;
@@ -18,31 +52,6 @@ body {
 
 .page-content {
   font-family: 'Lato', 'Raleway', 'Quicksand', 'Lora', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans serif !important;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  font-family: 'Arvo', 'ChunkFive', 'Chivo', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, serif;
-}
-
-.navbar {
-  background-color: #11436e;
-  font-family: 'Arvo', 'ChunkFive', 'Chivo', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, serif;
-  a {
-    color: #ffffff;
-  }
-}
-
-.my-brand {
-  margin-left: 0.25rem;
-  line-height: 1.8;
-  font-weight: 800;
-  font-size: 1.3rem;
-}
-
-a:hover, a:active {
-  color: #ff7f00 !important;
-  text-decoration: none !important;
 }
 
 // If you want to turn off dark background for syntax highlighting, comment or delete the below line.

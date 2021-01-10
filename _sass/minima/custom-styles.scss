@@ -44,10 +44,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 body {
-  background-color: #f2f2f2;
+  background-color: #f2f2f2 !important;
   font-size: 1rem;
   color: #212529 !important;
   font-family: 'Lato', 'Raleway', 'Quicksand', 'Lora', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans serif !important;
+}
+
+.masthead {
+  height: 50vh;
+  min-height: 54px;
+  background-image: url("/pollsposition_website/images/macron_cropped.jpeg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: #11436e;
 }
 
 .page-content {

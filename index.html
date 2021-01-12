@@ -1,9 +1,35 @@
 ---
 layout: home
 search_exclude: true
+image: images/logo.png
 ---
 
-<h2>How does the president's popularity change over time?</h2>
-<p>Graph</p>
+<div class="py-4 col-12 text-center" style="color: #11436e">
+    <h2 class="h1 font-weight-bold">Forecasting French
+        <span style="color: #ff7f00">Elections</span>
+        <span style="font-size: 1rem">with</span>
+                                    Bayesian
+        <span style="color: #ff7f00">Statistics</span>
+    </h2>
+</div>
 
-<h2>Posts</h2>
+<p class="py-3 lead text-center">
+    This website is a collection of tutorials detailing the models powering the electoral forecasts
+    displayed at
+    <a href="https://www.pollsposition.com/" target="_blank">PollsPosition.com</a>
+</p>
+
+<div class="text-center">
+    <iframe src="https://giphy.com/embed/yznEXxtq7wQlG" width="480" height="204" frameBorder="0"
+            class="giphy-embed" allowFullScreen
+    ></iframe>
+</div>
+
+The models are [open-sourced](https://github.com/AlexAndorra/pollsposition_models) and stand on
+the shoulders of giants of the [Python](https://www.python.org/) data stack:
+[PyMC3](https://docs.pymc.io/) for state-of-the-art MCMC algorithms,
+[ArviZ](https://arviz-devs.github.io/arviz/) and [Bokeh](https://docs.bokeh.org/en/latest/)
+for visualizations, and [Pandas](https://pandas.pydata.org/) for data cleaning.
+
+We warmly thank all the developers who give their time to develop these free, open-source and
+high quality scientific tools -- just like The Avengers, they really are true heroes.

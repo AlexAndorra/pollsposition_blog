@@ -55,5 +55,37 @@ body {
   font-family: 'Lato', 'Raleway', 'Quicksand', 'Lora', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans serif !important;
 }
 
+.site-footer {
+  color: #8c8c8c;
+  background-color: #030d16;
+  text-transform: uppercase;
+  font-size: 0.8rem !important;
+  padding: 40px;
+  a {
+    color: #f2f2f2 !important;
+  }
+  a:hover, a:active {
+    text-decoration: underline !important;
+  }
+}
+#copyright ul li:first-child {
+  border-left: 0;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+}
+#copyright ul li {
+  border-left: solid 2px;
+  line-height: 1;
+  margin-left: 1rem;
+  padding-left: 1rem;
+}
+#copyright ul li:last-child {
+  margin: 0;
+}
+.fa-heart, .fa-coffee {
+  color: #f2f2f2;
+}
+
 // If you want to turn off dark background for syntax highlighting, comment or delete the below line.
 @import "minima/fastpages-dracula-highlight";

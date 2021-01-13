@@ -1,1 +1,1 @@
-Sitemap: https://alexandorra.github.io/pollsposition_website/sitemap.xml
+Sitemap: https://alexandorra.github.io/pollsposition_blog/sitemap.xml

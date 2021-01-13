@@ -49,7 +49,6 @@ h1, h2, h3, h4, h5, h6 {
 body {
   background-color: #f2f2f2 !important;
   font-size: 1rem !important;
-  color: #212529 !important;
   font-family: 'Lato', 'Raleway', 'Quicksand', 'Lora', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans serif !important;
 }
 
@@ -68,6 +67,14 @@ body {
 .search-results-list-item a:hover .search-result-title, .search-results-list-item a:active .search-result-title{
   color: #ff7f00;
   text-decoration: none;
+}
+
+.post-content p, .post-content li {
+  font-size: 1.2rem;
+}
+
+.post-content li {
+  padding-bottom: 1rem;
 }
 
 .site-footer {

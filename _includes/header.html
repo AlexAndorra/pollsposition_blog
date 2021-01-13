@@ -1,0 +1,36 @@
+{%- assign default_paths = site.pages | map: "path" -%}
+{%- assign page_paths = site.header_pages | default: default_paths -%}
+
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg fixed-top py-1">
+    <div class="container">
+        <a class="navbar-brand py-1" rel="author" href="{{ '/' | relative_url }}">
+            <img src="{{ '/images/logo.png'|relative_url }}"
+                 class="d-inline-block align-top" width="40" height="40" alt=""
+            >
+            <span class="my-brand">{{ site.title | escape }}</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse"
+                data-target="#navbarResponsive"
+                aria-controls="navbarResponsive" aria-expanded="false"
+                aria-label="Toggle navigation"
+        >
+            <i class="fa fa-bars"></i>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+                {%- for path in page_paths -%}
+                {%- assign my_page = site.pages | where: "path", path | first -%}
+                {%- if my_page.title -%}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ my_page.url | relative_url }}">
+                        {{ my_page.title | escape }}
+                    </a>
+                </li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</nav>

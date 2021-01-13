@@ -2,7 +2,6 @@
 /*--- IMPORT STYLES FOR FASTPAGES ---*/
 @import "minima/fastpages-styles";
 
-
 /*-----------------------------------*/
 /*----- ADD YOUR STYLES BELOW -------*/
 
@@ -14,16 +13,19 @@
   font-size: 1rem;
   font-weight: 800;
   font-family: 'Arvo', 'ChunkFive', 'Chivo', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, serif;
+
   a {
     color: #ffffff !important;
   }
 }
+
 .navbar-toggler {
   font-size: 12px !important;
   padding: 13px !important;
   color: #11436e !important;
   background-color: #a7cef1 !important;
 }
+
 .my-brand {
   margin-left: 0.25rem;
   line-height: 1.8;
@@ -33,6 +35,7 @@
 a {
   color: #1e73be !important;
 }
+
 a:hover, a:active {
   color: #ff7f00 !important;
   text-decoration: none !important;
@@ -55,34 +58,52 @@ body {
   font-family: 'Lato', 'Raleway', 'Quicksand', 'Lora', 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans serif !important;
 }
 
+.post, .search {
+  padding-top: 1.5rem;
+}
+
+.search-results-list-item .search-result-title {
+  color: #1e73be;
+}
+.search-results-list-item a:hover .search-result-title, .search-results-list-item a:active .search-result-title{
+  color: #ff7f00;
+  text-decoration: none;
+}
+
 .site-footer {
   color: #8c8c8c;
   background-color: #030d16;
   text-transform: uppercase;
   font-size: 0.8rem !important;
   padding: 40px;
+
   a {
     color: #f2f2f2 !important;
   }
+
   a:hover, a:active {
     text-decoration: underline !important;
   }
 }
+
 #copyright ul li:first-child {
   border-left: 0;
   margin-left: 0;
   margin-right: 0;
   padding-left: 0;
 }
+
 #copyright ul li {
   border-left: solid 2px;
   line-height: 1;
   margin-left: 1rem;
   padding-left: 1rem;
 }
+
 #copyright ul li:last-child {
   margin: 0;
 }
+
 .fa-heart, .fa-coffee {
   color: #f2f2f2;
 }

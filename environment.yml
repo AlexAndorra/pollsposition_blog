@@ -1,4 +1,4 @@
-name: pp-website
+name: pp-blog
 channels:
   - conda-forge
 dependencies:

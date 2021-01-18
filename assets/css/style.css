@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css?family=Lato|Raleway|Quicksand|Arvo|ChunkFive|Chivo|Quattrocento|Quattrocento+Sans");
+@import url("https://fonts.googleapis.com/css?family=Lato|Raleway|Quicksand|Arvo|ChunkFive|Chivo");
 .highlight .c { color: #998; font-style: italic; }
 
 .highlight .err { color: #a61717; background-color: #e3d2d2; }
@@ -453,73 +453,15 @@ body { background-color: #f2f2f2 !important; font-size: 1rem !important; font-fa
 
 .post-content li { padding-bottom: 1rem; }
 
-.site-footer { color: #8c8c8c; background-color: #030d16; text-transform: uppercase; font-size: 0.8rem !important; padding: 40px; }
+.site-footer { color: #8c8c8c; background-color: #030d16; text-transform: uppercase; font-size: 0.8rem !important; padding: 40px 0; }
 
 .site-footer a { color: #f2f2f2 !important; }
 
 .site-footer a:hover, .site-footer a:active { text-decoration: underline !important; }
 
-#copyright ul li:first-child { border-left: 0; margin-left: 0; margin-right: 0; padding-left: 0; }
-
-#copyright ul li { border-left: solid 2px; line-height: 1; margin-left: 1rem; padding-left: 1rem; }
-
-#copyright ul li:last-child { margin: 0; }
-
 .fa-heart, .fa-coffee { color: #f2f2f2; }
 
-.language-python + .language-plaintext { border-left: 1px solid grey; margin-left: 1rem !important; }
-
-[class^="language-"]:not(.language-plaintext) pre, [class^="language-"]:not(.language-plaintext) code { background-color: #323443 !important; color: #f8f8f2; }
-
-.language-python + .language-plaintext code { background-color: white !important; }
-
-.language-python + .language-plaintext pre { background-color: white !important; }
-
-.input_area pre, .input_area div { margin-bottom: 1.0rem !important; margin-top: 1.5rem !important; padding-bottom: 0 !important; padding-top: 0 !important; background: #323443 !important; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-family: Menlo, Monaco, Consolas, "Lucida Console", Roboto, Ubuntu, monospace; border-radius: 5px; font-size: 105%; }
-
-.output_area pre, .output_area div { margin-bottom: 1rem !important; margin-top: 0rem !important; padding-bottom: 0 !important; padding-top: 0 !important; }
-
-.input_area pre { border-left: 1px solid lightcoral; }
-
-.output_area pre { border-left: 1px solid grey; margin-left: 1rem !important; font-size: 16px; }
-
-.code_cell table { width: auto; }
-
-/* Dracula Theme v1.2.5 https://github.com/zenorocha/dracula-theme Copyright 2016, All rights reserved Code licensed under the MIT license */
-.highlight { background: #323443 !important; color: #f8f8f2 !important; }
-
-.highlight pre, .highlight code { background: #323443; color: #f8f8f2; font-size: 110%; }
-
-.highlight .hll, .highlight .s, .highlight .sa, .highlight .sb, .highlight .sc, .highlight .dl, .highlight .sd, .highlight .s2, .highlight .se, .highlight .sh, .highlight .si, .highlight .sx, .highlight .sr, .highlight .s1, .highlight .ss { color: #e7997a; }
-
-.highlight .go { color: #44475a; }
-
-.highlight .err, .highlight .g, .highlight .l, .highlight .n, .highlight .x, .highlight .ge, .highlight .gr, .highlight .gh, .highlight .gi, .highlight .gp, .highlight .gs, .highlight .gu, .highlight .gt, .highlight .ld, .highlight .no, .highlight .nd, .highlight .pi, .highlight .ni, .highlight .ne, .highlight .nn, .highlight .nx, .highlight .py, .highlight .w, .highlight .bp { color: #f8f8f2; background-color: #323443 !important; }
-
-.highlight .p { font-weight: bold; color: #66d9ef; }
-
-.highlight .ge { text-decoration: underline; }
-
-.highlight .bp { font-style: italic; }
-
-.highlight .c, .highlight .ch, .highlight .cm, .highlight .cpf, .highlight .cs { color: #6272a4; }
-
-.highlight .c1 { color: gray; }
-
-.highlight .kd, .highlight .kt, .highlight .nb, .highlight .nl, .highlight .nv, .highlight .vc, .highlight .vg, .highlight .vi, .highlight .vm { color: #8be9fd; }
-
-.highlight .kd, .highlight .nb, .highlight .nl, .highlight .nv, .highlight .vc, .highlight .vg, .highlight .vi, .highlight .vm { font-style: italic; }
-
-.highlight .fm, .highlight .na, .highlight .nc, .highlight .nf { color: #ace591; }
-
-.highlight .k, .highlight .o, .highlight .cp, .highlight .kc, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .nt, .highlight .ow { color: #ff79c6; }
-
-.highlight .kc { color: #ace591; }
-
-.highlight .m, .highlight .mb, .highlight .mf, .highlight .mh, .highlight .mi, .highlight .mo, .highlight .il { color: #bd93f9; }
-
-.highlight .gd { color: #ff5555; }
-
-p code { font-size: 19px; }
+/* customize font size for code areas */
+.input_area pre, .input_area div, .output_area pre, .output_area div { font-size: 1rem; }
 
 /*# sourceMappingURL=style.css.map */

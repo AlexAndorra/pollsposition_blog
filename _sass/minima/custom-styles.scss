@@ -6,7 +6,7 @@
 /*----- ADD YOUR STYLES BELOW -------*/
 
 /* include Google Web fonts: */
-@import url('https://fonts.googleapis.com/css?family=Lato|Raleway|Quicksand|Arvo|ChunkFive|Chivo|Quattrocento|Quattrocento+Sans');
+@import url('https://fonts.googleapis.com/css?family=Lato|Raleway|Quicksand|Arvo|ChunkFive|Chivo');
 
 .navbar {
   background-color: #11436e;
@@ -116,4 +116,9 @@ body {
 }
 
 // If you want to turn off dark background for syntax highlighting, comment or delete the below line.
-@import "minima/fastpages-dracula-highlight";
+// @import "minima/fastpages-dracula-highlight";
+
+/* customize font size for code areas */
+.input_area pre, .input_area div, .output_area pre, .output_area div {
+  font-size: 1rem;
+}

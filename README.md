@@ -7,8 +7,7 @@ https://alexandorra.github.io/pollsposition_blog/
 
 # PollsPosition — The Blog
 
-This website is a collection of tutorials detailing the models powering the electoral forecasts
-and dashboards displayed at [PollsPosition.com](https://www.pollsposition.com/).
+This website is a collection of tutorials detailing the Bayesian statistical models used to forecast French elections at the [PollsPosition project](https://github.com/AlexAndorra/pollsposition_models). The corresponding interactive dashboards can be found [here](https://share.streamlit.io/alexandorra/pollsposition_website/main/gp-popularity-app.py).
 
 ## What is it?
 

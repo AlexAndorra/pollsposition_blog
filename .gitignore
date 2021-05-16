@@ -8,6 +8,7 @@ _site
 *.xml
 vendor
 _notebooks/.ipynb_checkpoints
+.ipynb_checkpoints/
 
 # Local Netlify folder
 .netlify

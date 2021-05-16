@@ -73,7 +73,9 @@ data["sondage"] = data["sondage"].replace("Yougov", "YouGov")
 data["method"] = data["method"].replace("face-to-face&internet", "face to face")
 
 # convert to proportions
-data[["approve_pr", "disapprove_pr"]] = data[["approve_pr", "disapprove_pr"]].copy() / 100
+data[["approve_pr", "disapprove_pr"]] = (
+    data[["approve_pr", "disapprove_pr"]].copy() / 100
+)
 data = data.rename(columns={"approve_pr": "p_approve", "disapprove_pr": "p_disapprove"})
 
 POLLSTERS = data["sondage"].sort_values().unique()
@@ -107,7 +109,11 @@ newterm_dates = data.reset_index().groupby("president").first()["index"].values
 dates = data.index
 
 fig, axes = plt.subplots(3, figsize=(12, 8))
-for ax, rate, label in zip(axes.ravel(), [approval_rates, disapproval_rates, doesnotrespond], ["Approve", "Disapprove", "No answer"]):
+for ax, rate, label in zip(
+    axes.ravel(),
+    [approval_rates, disapproval_rates, doesnotrespond],
+    ["Approve", "Disapprove", "No answer"],
+):
     ax.plot(dates, rate, "o", alpha=0.4)
     ax.set_ylim(0, 1)
     ax.set_ylabel(label)
@@ -138,7 +144,14 @@ rolling_std
 
 ```python
 fig, ax = plt.subplots(figsize=(10, 4))
-ax.plot(pd.to_datetime([f'{y}-{m}-01' for y, m in zip(rolling_std.year, rolling_std.month)]), rolling_std.p_approve.values, "o", alpha=0.5)
+ax.plot(
+    pd.to_datetime(
+        [f"{y}-{m}-01" for y, m in zip(rolling_std.year, rolling_std.month)]
+    ),
+    rolling_std.p_approve.values,
+    "o",
+    alpha=0.5,
+)
 ax.set_title("Monthly standard deviation in polls")
 for date in newterm_dates:
     ax.axvline(date, color="k", alpha=0.6, linestyle="--")
@@ -321,7 +334,9 @@ with pm.Model(coords=COORDS) as pooled_popularity:
     house_effect = pm.Normal("house_effect", 0, 0.15, dims="pollster_by_method")
     month_effect = pm.GaussianRandomWalk("month_effect", sigma=1.0, dims="month")
 
-    popularity = pm.math.invlogit(month_effect[month_id] + house_effect[pollster_by_method_id])
+    popularity = pm.math.invlogit(
+        month_effect[month_id] + house_effect[pollster_by_method_id]
+    )
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -357,8 +372,10 @@ Let's not spend too much time on this model, but before we move on, it's useful 
 ```python
 def plot_latent_mu(inference_data, overlay_observed=True):
     """Plot latent posterior popularity"""
-    post_pop = logistic(inference_data.posterior["mu"].stack(sample=("chain", "draw")))
-    
+    post_pop = logistic(
+        inference_data.posterior["month_effect"].stack(sample=("chain", "draw"))
+    )
+
     fig, ax = plt.subplots()
     for i in np.random.choice(post_pop.coords["sample"].size, size=1000):
         ax.plot(
@@ -370,11 +387,59 @@ def plot_latent_mu(inference_data, overlay_observed=True):
     post_pop.mean("sample").plot(ax=ax, color="black", lw=2, label="predicted mean")
 
     if overlay_observed:
-        obs_mean = data.groupby(["president", "month_id"]).last()["p_approve_mean"].unstack().T
+        obs_mean = (
+            data.groupby(["president", "month_id"]).last()["p_approve_mean"].unstack().T
+        )
         for president in obs_mean.columns:
-            ax.plot(obs_mean.index, obs_mean[president], "o", alpha=0.3, label=f"obs. monthly {president}")
+            ax.plot(
+                obs_mean.index,
+                obs_mean[president],
+                "o",
+                alpha=0.3,
+                label=f"obs. monthly {president}",
+            )
     ax.set_xlabel("Months into term")
     ax.set_ylabel("Does approve")
+    ax.legend()
+    
+    
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 8), sharex=True, sharey=True)
+
+for ax, p in zip(axes.ravel(), idata.posterior.coords["president"]):
+    post = idata.posterior.sel(president=p)
+    post_pop = logistic(
+        (
+            post["baseline"]
+            + post["president_effect"]
+            + post["month_effect"]
+            + post["month_president_effect"]
+        ).stack(sample=("chain", "draw"))
+    )
+    # plot random posterior draws
+    ax.plot(
+        post.coords["month"],
+        post_pop.isel(
+            sample=np.random.choice(post_pop.coords["sample"].size, size=1000)
+        ),
+        alpha=0.01,
+        color="grey",
+    )
+    # plot posterior mean
+    post_pop.mean("sample").plot(
+        ax=ax, color="black", lw=2, label="predicted mean"
+    )
+    # plot monthly raw polls
+    ax.plot(
+        obs_mean.index,
+        obs_mean[p.data],
+        "o",
+        color="orange",
+        alpha=0.8,
+        label="observed monthly",
+    )
+    ax.set_xlabel("Months into term")
+    ax.set_ylabel("Latent popularity")
     ax.legend()
 ```
 
@@ -394,12 +459,14 @@ Instead of fixing the random walk's innovation, let's estimate it from the data.
 
 ```python
 with pm.Model(coords=COORDS) as pooled_popularity:
-    
+
     house_effect = pm.Normal("house_effect", 0, 0.15, dims="pollster_by_method")
     sigma_mu = pm.HalfNormal("sigma_mu", 0.5)
     month_effect = pm.GaussianRandomWalk("month_effect", sigma=sigma_mu, dims="month")
 
-    popularity = pm.math.invlogit(month_effect[month_id] + house_effect[pollster_by_method_id])
+    popularity = pm.math.invlogit(
+        month_effect[month_id] + house_effect[pollster_by_method_id]
+    )
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -446,12 +513,14 @@ As we saw with the previous model, the variance of $\mu$'s posterior values is g
 
 ```python
 with pm.Model(coords=COORDS) as pooled_popularity:
-    
+
     house_effect = pm.Normal("house_effect", 0, 0.15, dims="pollster_by_method")
     sigma_mu = pm.HalfNormal("sigma_mu", 0.5)
     month_effect = pm.GaussianRandomWalk("month_effect", sigma=sigma_mu, dims="month")
 
-    popularity = pm.math.invlogit(month_effect[month_id] + house_effect[pollster_by_method_id])
+    popularity = pm.math.invlogit(
+        month_effect[month_id] + house_effect[pollster_by_method_id]
+    )
 
     # overdispersion parameter
     theta = pm.Exponential("theta_offset", 1.0) + 10.0
@@ -515,9 +584,9 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
     )
 
     popularity = pm.math.invlogit(
-            month_president_effect[president_id, month_id]
-            + house_effect[pollster_by_method_id]
-        )
+        month_president_effect[president_id, month_id]
+        + house_effect[pollster_by_method_id]
+    )
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -526,7 +595,7 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
         observed=data["num_approve"],
         dims="observation",
     )
-    
+
     idata = pm.sample(return_inferencedata=True)
 ```
 
@@ -555,9 +624,9 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
     )
 
     popularity = pm.math.invlogit(
-            month_president_effect[president_id, month_id]
-            + house_effect[pollster_by_method_id]
-        )
+        month_president_effect[president_id, month_id]
+        + house_effect[pollster_by_method_id]
+    )
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -617,12 +686,12 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
     )
 
     popularity = pm.math.invlogit(
-            baseline
-            + president_effect[president_id]
-            + month_effect[month_id]
-            + month_president_effect[president_id, month_id]
-            + house_effect[pollster_by_method_id]
-        )
+        baseline
+        + president_effect[president_id]
+        + month_effect[month_id]
+        + month_president_effect[president_id, month_id]
+        + house_effect[pollster_by_method_id]
+    )
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -646,6 +715,8 @@ arviz.plot_trace(
 ```
 
 That looks much better, doesn't it? Now we do see a difference in the different months, and the shrinkage standard deviation looks much more reasonable too, meaning that once we've accounted for the variation in popularity associated with the other effects, the different presidents' popularity isn't that different on a monthly basis -- i.e there _are_ cycles in popularity, no matter who the president is.
+
+## Modelers just wanna have fuuuun!
 
 We could stop there, but, for fun, let's improve this model even further by:
 
@@ -738,12 +809,12 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
     )
 
     popularity = pm.math.invlogit(
-            baseline
-            + president_effect[president_id]
-            + month_effect[month_id]
-            + month_president_effect[president_id, month_id]
-            + house_effect[pollster_by_method_id]
-        )
+        baseline
+        + president_effect[president_id]
+        + month_effect[month_id]
+        + month_president_effect[president_id, month_id]
+        + house_effect[pollster_by_method_id]
+    )
 
     # overdispersion parameter
     theta = pm.Exponential("theta_offset", 1.0) + 10.0
@@ -784,21 +855,28 @@ arviz.summary(
 )
 ```
 
-
+And now let's do something new! Let's visualize the posterior estimates of the house effects. We'll plot the mean value for each `(pollster, method)` pair. Remember, a _positive_ house effect means the given pair tend to _overestimate_ the latent popularity:
 
 ```python
 mean_house_effect = (
     idata.posterior["house_effect"].mean(("chain", "draw")).to_dataframe()
 )
-mean_house_effect.round(2)
-```
-
-```python
 ax = mean_house_effect.plot.bar(figsize=(14, 7), rot=30)
+ax.set_xlabel("(pollster, method)")
+ax.set_ylabel("house effect")
 ax.set_title("$>0$ bias means (pollster, method) overestimates the latent popularity");
 ```
 
+All this is inline with what I usually observe when I collect the polls each month (yes, by hand, thanks for asking, that's so cute!):
+
+- BVA tends to be a bit higher than average, no matter the method. Harris tends to be higher too, while Viavoice, Elabe and, especially, YouGov tend to be report much lower results than the average pollster.
+- As suspected, Kantar is lower than average when using face-to-face, but is now within the average since it shifted to internet in January 2021. Interestingly, it goes the other way around for Ipsos: internet has a slightly negative bias for them, while phone has a slightly positive one.
+
+Now let's look at our posterior predictions. This time, we can distinguish each president, which probably helped the model tremendously:
+
 ```python
+obs_mean = data.groupby(["president", "month_id"]).last()["p_approve_mean"].unstack().T
+
 fig, axes = plt.subplots(2, 2, figsize=(14, 8), sharex=True, sharey=True)
 
 for ax, p in zip(axes.ravel(), idata.posterior.coords["president"]):
@@ -811,22 +889,40 @@ for ax, p in zip(axes.ravel(), idata.posterior.coords["president"]):
             + post["month_president_effect"]
         ).stack(sample=("chain", "draw"))
     )
-    post_pop = post_pop.isel(
-        sample=np.random.choice(post_pop.coords["sample"].size, size=1000)
+    # plot random posterior draws
+    ax.plot(
+        post.coords["month"],
+        post_pop.isel(
+            sample=np.random.choice(post_pop.coords["sample"].size, size=1000)
+        ),
+        alpha=0.01,
+        color="grey",
     )
-    ax.plot(post.coords["month"], post_pop, alpha=0.01, color="blue", label=p)
-    post_pop.median("sample").plot(
-        ax=ax, color="orange", alpha=0.8, lw=2, label="Median"
+    # plot posterior mean
+    post_pop.mean("sample").plot(
+        ax=ax, color="black", lw=2, label="predicted mean"
     )
-    ax.set_ylabel("Latent popularity")
+    # plot monthly raw polls
+    ax.plot(
+        obs_mean.index,
+        obs_mean[p.data],
+        "o",
+        color="orange",
+        alpha=0.8,
+        label="observed monthly",
+    )
     ax.set_xlabel("Months into term")
-    
-
-    if overlay_observed:
-        obs_mean = data.groupby(["president", "month_id"]).last()["p_approve_mean"].unstack().T
-        for president in obs_mean.columns:
-            ax.plot(obs_mean.index, obs_mean[president], "o", alpha=0.3, label=f"obs. monthly {president}")
+    ax.set_ylabel("Latent popularity")
+    ax.legend()
 ```
+
+Quite the improvement uh? The model is much, much better at tracking each president's popoularity now -- this extension to a hierarchical structure proved very necessary!
+
+Another way to check our model's performance is to generate plausible polls from it, and compare them to the _actual_ polls. This is a genuine posterior retrodictive check: we generate data from our model and check how plausible they are, compared to the observed data and our domain knowledge. Contrary to our previous plot, this kind of checks integrate all the model uncertainty down to the likelihood, so it's directly comparable to the observed data. 
+
+In particular, we can see in the plot above that the model still has one weakness: it has troubles when the popularity rate varies widely from one month to the next. These wild bumps happen for various reasons, usually in answer to big political events. Although they vary in magnitude, we do see a few of them in each mandate, and each time the model wasn't aggressive in enough in keeping in line with them. That could be trouble for out-of-sample predictions and could be improved in a subsequent version of the model.
+
+Compution posterior predictive samples is just one line of code in PyMC3. We'll also extend our current `InferenceData` object with these posterior predictive samples, to be able to use all the xarray goodies in our plot (for a quick start on ArviZ's `InferenceData`'s awesomness for multidimensional data, [click here](https://arviz-devs.github.io/arviz/getting_started/XarrayforArviZ.html)).
 
 ```python
 with hierarchical_popularity:
@@ -838,12 +934,14 @@ with hierarchical_popularity:
 ```
 
 ```python
-predicted_approval_rates = idata.posterior_predictive.mean(("chain", "draw"))["N_approve"] / data["samplesize"]
+predicted_approval_rates = (
+    idata.posterior_predictive.mean(("chain", "draw"))["N_approve"] / data["samplesize"]
+)
 dates = predicted_approval_rates.field_date
 
 fig, ax = plt.subplots(figsize=(12, 4))
-ax.plot(dates, data["p_approve"].values, "o", color="k", alpha=0.5, label="observed")
-ax.plot(dates, predicted_approval_rates, "o", alpha=0.5, label="predicted")
+ax.plot(dates, data["p_approve"].values, "o", color="k", alpha=0.3, label="observed polls")
+ax.plot(dates, predicted_approval_rates, "o", alpha=0.5, label="predicted polls")
 ax.set_ylim(0.1, 0.8)
 ax.set_title("Posterior Predictive Approval Rate")
 ax.legend()
@@ -851,17 +949,11 @@ for date in newterm_dates:
     ax.axvline(date, color="k", alpha=0.6, linestyle="--")
 ```
 
-## TODO
+These are really good predictions 😲 ! The model has very little trouble tracking the evolution and variation of each president's popularity, so we can be happy with ourselves. Interestingly though, we still see this tendency of the model to slightly underestimate the variation in raw polls, especially when big, sudden shifts in opinion happen, as we already mentioned. Although we don't want to _exactly_ replicate the observed data (some polls really are outliers and that's good that the model doesn't overfit), it would be interesting to see if the model can be further improved in this respect.
 
-- Posterior predictive analysis: distribution of $p_{\mathrm{approve}}$ for each pollster and method. We can plot the approval rates for each poll for each president.
+And that, ladies and gentlemen, was our workflow for a Bayesian hidden Markov model of 🇫🇷 presidents' popularity! We hope you enjoyed it, and feel free to comment below or reach out for any comments or suggestions. By the way, what do you think of this model? Are you surprised that French people tend to dislike their presidents?
 
-- Re-read the paper by Gellman et al. on predicting the US presidential election. We may be able to catch something new given our experience with this first model.
-
-- Estimate `month_effect` with a GRW too? This could be easier for the model to first estimate the temporal dependency only for month, and then do that for each month and president.
-
-- Try a GP for the temporal dependency? This would estimate the _covariation_ between months for free, and also GPs tend to behave better than GRW.
-
-- We do not include time correlations in the model, but it is obvious that there is a *dynamic* in the popularity and the popularity at time $t$ also depends on the popularity at times before the previous months; we could add time correlations.
+![MicDropUrl](https://media.giphy.com/media/3o7qDEq2bMbcbPRQ2c/giphy.gif)
 
 ```python
 %load_ext watermark

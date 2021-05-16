@@ -252,7 +252,7 @@ Again, keep in mind that there is substantial correlation between pollsters and 
 Speaking of models, do you know what time it is? It's model time, of course!!
 
 
-## Model
+## Specifying the model
 
 We'll build several versions of our model, refining it incrementally. But the basic structure will remain the same. Let's build an abstract version that will help you undertand the code.
 
@@ -324,7 +324,7 @@ COORDS = {
 }
 ```
 
-### Fixed `sigma` for GRW
+### Fixed `sigma` for the random walk
 
 Our first model is as simple as possible: just a random walk on the monthly latent popularity and a term for the bias of each `(pollster, method)` pair, which is called the "house effect" in the political science litterature. Also, we'll use a more descriptive name for $\mu$ -- `month_effect` sounds good, because, well, that's basically what it is. We'll arbitrarily fix the innovation of the random walk (`sigma`) to 1 and see how it fares.
 
@@ -377,15 +377,21 @@ def plot_latent_mu(inference_data, overlay_observed=True):
     )
 
     fig, ax = plt.subplots()
-    for i in np.random.choice(post_pop.coords["sample"].size, size=1000):
-        ax.plot(
-            inference_data.posterior.coords["month"],
-            post_pop.isel(sample=i),
-            alpha=0.01,
-            color="grey",
-        )
+    
+    # plot random posterior draws
+    ax.plot(
+        inference_data.posterior.coords["month"],
+        post_pop.isel(
+            sample=np.random.choice(post_pop.coords["sample"].size, size=1000)
+        ),
+        alpha=0.01,
+        color="grey",
+    )
+    
+    # plot posterior mean
     post_pop.mean("sample").plot(ax=ax, color="black", lw=2, label="predicted mean")
-
+    
+    # plot monthly raw polls
     if overlay_observed:
         obs_mean = (
             data.groupby(["president", "month_id"]).last()["p_approve_mean"].unstack().T
@@ -401,46 +407,6 @@ def plot_latent_mu(inference_data, overlay_observed=True):
     ax.set_xlabel("Months into term")
     ax.set_ylabel("Does approve")
     ax.legend()
-    
-    
-
-fig, axes = plt.subplots(2, 2, figsize=(14, 8), sharex=True, sharey=True)
-
-for ax, p in zip(axes.ravel(), idata.posterior.coords["president"]):
-    post = idata.posterior.sel(president=p)
-    post_pop = logistic(
-        (
-            post["baseline"]
-            + post["president_effect"]
-            + post["month_effect"]
-            + post["month_president_effect"]
-        ).stack(sample=("chain", "draw"))
-    )
-    # plot random posterior draws
-    ax.plot(
-        post.coords["month"],
-        post_pop.isel(
-            sample=np.random.choice(post_pop.coords["sample"].size, size=1000)
-        ),
-        alpha=0.01,
-        color="grey",
-    )
-    # plot posterior mean
-    post_pop.mean("sample").plot(
-        ax=ax, color="black", lw=2, label="predicted mean"
-    )
-    # plot monthly raw polls
-    ax.plot(
-        obs_mean.index,
-        obs_mean[p.data],
-        "o",
-        color="orange",
-        alpha=0.8,
-        label="observed monthly",
-    )
-    ax.set_xlabel("Months into term")
-    ax.set_ylabel("Latent popularity")
-    ax.legend()
 ```
 
 ```python
@@ -453,7 +419,7 @@ No need to stare at this graph to notice that the model grossly underestimates t
 
 An easy and obvious way to improve this model is to allow the random walk's innovation to vary more. Maybe our model is too constrained by the fixed innovation and can't accomodate the variation in the data?
 
-### Infer the standard deviation $\sigma$ of the random walk
+### Infer the standard deviation of the random walk
 
 Instead of fixing the random walk's innovation, let's estimate it from the data. The code is very similar:
 

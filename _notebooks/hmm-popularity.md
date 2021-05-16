@@ -377,7 +377,7 @@ def plot_latent_mu(inference_data, overlay_observed=True):
     )
 
     fig, ax = plt.subplots()
-    
+
     # plot random posterior draws
     ax.plot(
         inference_data.posterior.coords["month"],
@@ -387,10 +387,10 @@ def plot_latent_mu(inference_data, overlay_observed=True):
         alpha=0.01,
         color="grey",
     )
-    
+
     # plot posterior mean
     post_pop.mean("sample").plot(ax=ax, color="black", lw=2, label="predicted mean")
-    
+
     # plot monthly raw polls
     if overlay_observed:
         obs_mean = (
@@ -865,9 +865,7 @@ for ax, p in zip(axes.ravel(), idata.posterior.coords["president"]):
         color="grey",
     )
     # plot posterior mean
-    post_pop.mean("sample").plot(
-        ax=ax, color="black", lw=2, label="predicted mean"
-    )
+    post_pop.mean("sample").plot(ax=ax, color="black", lw=2, label="predicted mean")
     # plot monthly raw polls
     ax.plot(
         obs_mean.index,
@@ -906,7 +904,9 @@ predicted_approval_rates = (
 dates = predicted_approval_rates.field_date
 
 fig, ax = plt.subplots(figsize=(12, 4))
-ax.plot(dates, data["p_approve"].values, "o", color="k", alpha=0.3, label="observed polls")
+ax.plot(
+    dates, data["p_approve"].values, "o", color="k", alpha=0.3, label="observed polls"
+)
 ax.plot(dates, predicted_approval_rates, "o", alpha=0.5, label="predicted polls")
 ax.set_ylim(0.1, 0.8)
 ax.set_title("Posterior Predictive Approval Rate")

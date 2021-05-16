@@ -21,7 +21,7 @@ jupyter:
 - comments: true
 - author: Alexandre Andorra, Rémi Louf
 - categories: [popularity, Macron, Hidden Markov models, polls]
-- image: images/gp-popularity.png
+- image: images/hmm-popularity.png
 
 
 A few months ago, [I experimented with a Gaussian Process](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html) to estimate the popularity of French presidents across time. The experiment was really positive, and helped me get familiar with the beauty of GPs. This time, I teamed up with [Rémi Louf](https://twitter.com/remilouf) on a [hidden Markov model](https://en.wikipedia.org/wiki/Hidden_Markov_model) to estimate the same process -- what is the true latent popularity, that we only observe through the noisy data that are polls?
@@ -925,6 +925,7 @@ And that, ladies and gentlemen, was our workflow for a Bayesian hidden Markov mo
 ![MicDropUrl](https://media.giphy.com/media/3o7qDEq2bMbcbPRQ2c/giphy.gif)
 
 ```python
+# hide_input
 %load_ext watermark
 %watermark -n -u -v -iv
 ```

@@ -241,22 +241,24 @@ Speaking of models, do you know what time it is? It's model time, of course!!
 
 ## Model
 
+We'll build several versions of our model, refining it incrementally. But the basic structure will remain the same. Let's build an abstract version that will help you undertand the code.
+
 Each poll $i$ at month $m$ from the beginning of a president’s term finds that
 $y_i$ individuals have a positive opinion of the president’s action over
-$n_i$ respondents. We model this as
+$n_i$ respondents. We model this as:
 
 $$y_{i,m} \sim Binomial(p_{i,m}, n_{i,m})$$
 
 We loosely call $p_{i,m}$ the *popularity* of the president, $m$ month into his
-presidency. This is the quantity we would like to model.
+presidency. This is the quantity we would like to model. Note that it's latent: we never get to observe it in the world.
 
 Why specify the month when the time information is already contained in the
 succession of polls? Because French people tend to be less and less satisfied
-with their president as their term moves, regardless of their action.
+with their president as their term moves, regardless of their action -- you'll see...
 
 We model $p_{i,m}$ with a random walk logistic regression:
 
-$$p_{i,m} = logit^{-1}(\mu_m + \alpha_k + \zeta_j)$$
+$$p_{i,m} = logistic(\mu_m + \alpha_k + \zeta_j)$$
 
 $\mu_m$ is the underlying support for the president at month $m$. $\alpha_k$ is
 the bias of the pollster, while $\zeta_j$ is the inherent bias of the polling
@@ -278,11 +280,12 @@ decline in popularity $\delta$, the unmeployment at month $m$, $U_m$, or
 random events that can happen during the term. 
 
 ```python
+# hide
 data["num_approve"] = np.floor(data["samplesize"] * data["p_approve"]).astype("int")
 data
 ```
 
-Each observation is uniquely identified by `(pollster, field_date)`:
+To define our model, we'll use [PyMC's named coordinates feature](https://docs.pymc.io/pymc-examples/examples/pymc3_howto/data_container.html). That way, we'll be able to write down our model using the names of variables instead of their shape dimensions. To do that, we need to define a bunch of variables:
 
 ```python
 pollster_by_method_id, pollster_by_methods = data.set_index(
@@ -303,23 +306,22 @@ months = np.arange(max(month_id) + 1)
 COORDS = {
     "pollster_by_method": pollster_by_methods,
     "month": months,
+    # each observation is uniquely identified by (pollster, field_date):
     "observation": data.set_index(["sondage", "field_date"]).index,
 }
 ```
 
-### Fixed `mu` for GRW
+### Fixed `sigma` for GRW
+
+Our first model is as simple as possible: just a random walk on the monthly latent popularity and a term for the bias of each `(pollster, method)` pair, which is called the "house effect" in the political science litterature. Also, we'll use a more descriptive name for $\mu$ -- `month_effect` sounds good, because, well, that's basically what it is. We'll arbitrarily fix the innovation of the random walk (`sigma`) to 1 and see how it fares.
 
 ```python
 with pm.Model(coords=COORDS) as pooled_popularity:
 
-    bias = pm.Normal("bias", 0, 0.15, dims="pollster_by_method")
-    mu = pm.GaussianRandomWalk("mu", sigma=1.0, dims="month")
+    house_effect = pm.Normal("house_effect", 0, 0.15, dims="pollster_by_method")
+    month_effect = pm.GaussianRandomWalk("month_effect", sigma=1.0, dims="month")
 
-    popularity = pm.Deterministic(
-        "popularity",
-        pm.math.invlogit(mu[month_id] + bias[pollster_by_method_id]),
-        dims="observation",
-    )
+    popularity = pm.math.invlogit(month_effect[month_id] + house_effect[pollster_by_method_id])
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -335,72 +337,69 @@ with pm.Model(coords=COORDS) as pooled_popularity:
 We plot the posterior distribution of the pollster and method biases:
 
 ```python
-arviz.plot_trace(idata, var_names=["~popularity"], compact=True);
+arviz.plot_trace(idata);
 ```
 
-Since we are performing a logistic regression, these coefficients can be tricky to interpret. When the bias is positive, this means that we need to add to the latent popularity to get the observation, which means that the pollster/method tends to be biased towards giving higher popularity scores.
+Because of the logistic link function, these coefficients can be tricky to interpret. When the bias is positive, this means that we need to add to the latent popularity to get the observation, which means that the (pollster, method) pair tends to be biased towards giving higher popularity scores.
+
+This model clearly has issues: the trace plot is really ugly and the R-hat statistic is larger than 1.2 for some parameters, which indicates problems during sampling. This is not surprising: this model is _really_ simple. The important thing here is to diagnose the depth of the pathologies, and see how that points us to improvements.
+
+Let's look at the summary table:
 
 ```python
-arviz.summary(idata, round_to=2, var_names=["~popularity"])
+arviz.summary(idata, round_to=2)
 ```
 
-```python
-mean_bias = idata.posterior["bias"].mean(("chain", "draw")).to_dataframe()
-mean_bias.round(2)
-```
+Wow, that's bad! Do you see these much-too-high R_hat and much-too-low effective sample sizes (`ess_bulk` and `ess_tail`)?
+
+Let's not spend too much time on this model, but before we move on, it's useful to see how bad our posterior predictions for `mu`, the estimated monthly latent popularity, look. Since the model is completely pooled, we only have 60 values, which correspond to a full term (i.e 5 years):
 
 ```python
-ax = mean_bias.plot.bar(figsize=(14, 8), rot=30)
-ax.set_title("$>0$ bias means (pollster, method) overestimates the latent popularity");
-```
+def plot_latent_mu(inference_data, overlay_observed=True):
+    """Plot latent posterior popularity"""
+    post_pop = logistic(inference_data.posterior["mu"].stack(sample=("chain", "draw")))
+    
+    fig, ax = plt.subplots()
+    for i in np.random.choice(post_pop.coords["sample"].size, size=1000):
+        ax.plot(
+            inference_data.posterior.coords["month"],
+            post_pop.isel(sample=i),
+            alpha=0.01,
+            color="grey",
+        )
+    post_pop.mean("sample").plot(ax=ax, color="black", lw=2, label="predicted mean")
 
-We now plot the posterior values of `mu`. Since the model is completely pooled, we only have 60 values, which correspond to a full term:
-
-```python
-post_pop = logistic(idata.posterior["mu"].stack(sample=("chain", "draw")))
-
-fig, ax = plt.subplots()
-for i in np.random.choice(post_pop.coords["sample"].size, size=1000):
-    ax.plot(
-        idata.posterior.coords["month"],
-        post_pop.isel(sample=i),
-        alpha=0.01,
-        color="blue",
-    )
-post_pop.mean("sample").plot(ax=ax, color="orange", lw=2)
-ax.set_ylabel("Popularity")
-ax.set_xlabel("Months into term");
-```
-
-```python
-hdi_data = arviz.hdi(logistic(idata.posterior["mu"]))
-ax = arviz.plot_hdi(idata.posterior.coords["month"], hdi_data=hdi_data)
-ax.vlines(
-    idata.posterior.coords["month"],
-    hdi_data.sel(hdi="lower")["mu"],
-    hdi_data.sel(hdi="higher")["mu"],
-)
-post_pop.median("sample").plot(ax=ax);
+    if overlay_observed:
+        obs_mean = data.groupby(["president", "month_id"]).last()["p_approve_mean"].unstack().T
+        for president in obs_mean.columns:
+            ax.plot(obs_mean.index, obs_mean[president], "o", alpha=0.3, label=f"obs. monthly {president}")
+    ax.set_xlabel("Months into term")
+    ax.set_ylabel("Does approve")
+    ax.legend()
 ```
 
 ```python
-arviz.plot_posterior(logistic(idata.posterior["mu"].sel(month=42)));
+plot_latent_mu(idata)
 ```
+
+Not too good, is it? The black line is the mean posterior latent monthly popularity estimated by the model. Each grey line is a draw from the posterior latent popularity, and each point is the observed monthly mean popularity in polls for each president.
+
+No need to stare at this graph to notice that the model grossly underestimates the variance in the data. We also see that presidents differ quite a lot, although they have some common pattern (this is a clue for improving the model; can you guess how we could include that?). The good point though is that the model is highly influenced by the sample size: up until month 50, the posterior prediction stays close to wherever the most dots are clustered, because those values appear most frequently, so it's a safer bet. Between months 50 and 60, polls become more dispersed, so the model is doing a compromise, staying below the bulk of points but much higher than the lowest points. Here, what's troubling the model is that one of the presidents (François Hollande) was hugely unpopular at the end of his term compared to the others.
+
+An easy and obvious way to improve this model is to allow the random walk's innovation to vary more. Maybe our model is too constrained by the fixed innovation and can't accomodate the variation in the data?
 
 ### Infer the standard deviation $\sigma$ of the random walk
 
+Instead of fixing the random walk's innovation, let's estimate it from the data. The code is very similar:
+
 ```python
 with pm.Model(coords=COORDS) as pooled_popularity:
-
-    bias = pm.Normal("bias", 0, 0.15, dims="pollster_by_method")
+    
+    house_effect = pm.Normal("house_effect", 0, 0.15, dims="pollster_by_method")
     sigma_mu = pm.HalfNormal("sigma_mu", 0.5)
-    mu = pm.GaussianRandomWalk("mu", sigma=sigma_mu, dims="month")
+    month_effect = pm.GaussianRandomWalk("month_effect", sigma=sigma_mu, dims="month")
 
-    popularity = pm.Deterministic(
-        "popularity",
-        pm.math.invlogit(mu[month_id] + bias[pollster_by_method_id]),
-        dims="observation",
-    )
+    popularity = pm.math.invlogit(month_effect[month_id] + house_effect[pollster_by_method_id])
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -413,63 +412,46 @@ with pm.Model(coords=COORDS) as pooled_popularity:
     idata = pm.sample(tune=2000, draws=2000, return_inferencedata=True)
 ```
 
-```python
-arviz.plot_trace(idata, var_names=["~popularity"], compact=True);
-```
+Did this help convergence?
 
 ```python
-arviz.summary(idata, round_to=2, var_names=["~popularity"])
+arviz.plot_trace(idata);
 ```
+
+Aaaaah, my eyes, my eyes, please stop!
+
+These trace plots are still very ugly. What about the R-hats and effective sample sizes?
 
 ```python
-post_pop = logistic(idata.posterior["mu"].stack(sample=("chain", "draw")))
-
-fig, ax = plt.subplots()
-for i in np.random.choice(post_pop.coords["sample"].size, size=1000):
-    ax.plot(
-        idata.posterior.coords["month"],
-        post_pop.isel(sample=i),
-        alpha=0.01,
-        color="blue",
-    )
-post_pop.mean("sample").plot(ax=ax, color="orange", lw=2)
-ax.set_ylabel("Popularity")
-ax.set_xlabel("Months into term");
+arviz.summary(idata, round_to=2)
 ```
+
+Still very, very bad... The only good news is that we seem to efficiently estimate `sigma_mu`, the innovation of the random walk -- the R-hat is perfect and the ESS is high.
+
+Do the posterior predictions look better?
 
 ```python
-hdi_data = arviz.hdi(logistic(idata.posterior["mu"]))
-ax = arviz.plot_hdi(idata.posterior.coords["month"], hdi_data=hdi_data)
-ax.vlines(
-    idata.posterior.coords["month"],
-    hdi_data.sel(hdi="lower")["mu"],
-    hdi_data.sel(hdi="higher")["mu"],
-)
-post_pop.median("sample").plot(ax=ax);
+plot_latent_mu(idata)
 ```
 
-The posterior variance of the values of $\mu$ looks grossly underestimated; between month 40 and 50 presidents have had popularity rates between .2 nd .4 while here the popularity is estimated aournd .21 plus or minus .02 at best. We need to fhix this.
-
+The posterior variance of the values of $\mu$ still is grossly underestimated; between month 40 and 50 presidents have had popularity rates between 0.2 and 0.4, while here the popularity is estimated to be around 0.21 plus or minus 0.02 at best. We need to fhix this.
 
 ### A model that accounts for the overdispersion of polls
 
+As we saw with the previous model, the variance of $\mu$'s posterior values is grossly underestimated. This comes from at least two things:
 
-As we saw with the previous model, the variance of $\mu$'s posterior values is grossly underestimated. This suggests that the variance in the obervations is not only due to variations in the mean value, $p_{approve}$. Indeed, there is variance in the results that probably cannot be accounted for by the pollsters' and method's biases and has more something to do with measurement errors, or other factors we did not include.
+1. Presidents have similarities, but also a lot of differences in how their popularity rates evolves with time. We should take that into account and estimate one trendline per president. We'll do that later.
 
-We use a Beta-Binomial model to add one degree of liberty and allow the variance to be estimated independently from the mean value:
+2. Even beyond president effects, it seems that there is much more variation in the data that a Binomial distribution expects (as is often the case with count data). This is called overdispersion of data in statistical linguo, and is due to the fact that the Binomial's variance depends on its mean. A convenient way to get around this limitation is to use a Beta-Binomial likelihood, to add one degree of freedom and allow the variance to be estimated independently from the mean value. For more details about this distribution and its parametrization, see [this blog post](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html#Build-me-a-model). In short, this allows each poll to have its own Binomial probability, which even makes sense scientifically: it's conceivable that each poll is different in several ways from the others (even when done by the same pollster), because there are measurement errors and other factors we did not include, even beyond pollsters' and method's biases.
 
 ```python
 with pm.Model(coords=COORDS) as pooled_popularity:
-
-    bias = pm.Normal("bias", 0, 0.15, dims="pollster_by_method")
+    
+    house_effect = pm.Normal("house_effect", 0, 0.15, dims="pollster_by_method")
     sigma_mu = pm.HalfNormal("sigma_mu", 0.5)
-    mu = pm.GaussianRandomWalk("mu", sigma=sigma_mu, dims="month")
+    month_effect = pm.GaussianRandomWalk("month_effect", sigma=sigma_mu, dims="month")
 
-    popularity = pm.Deterministic(
-        "popularity",
-        pm.math.invlogit(mu[month_id] + bias[pollster_by_method_id]),
-        dims="observation",
-    )
+    popularity = pm.math.invlogit(month_effect[month_id] + house_effect[pollster_by_method_id])
 
     # overdispersion parameter
     theta = pm.Exponential("theta_offset", 1.0) + 10.0
@@ -487,44 +469,32 @@ with pm.Model(coords=COORDS) as pooled_popularity:
 ```
 
 ```python
-arviz.plot_trace(idata, var_names=["~popularity"], compact=True);
+arviz.plot_trace(idata);
 ```
 
 ```python
-arviz.summary(idata, round_to=2, var_names=["~popularity"])
+arviz.summary(idata, round_to=2)
 ```
+
+All of this is looking much better: only one sampling warning, really good-looking trace plot and much higher effective sample sizes (although it's still a bit low for some parameters).
+
+What about the posterior predictions?
 
 ```python
-post_pop = logistic(idata.posterior["mu"].stack(sample=("chain", "draw")))
-
-fig, ax = plt.subplots()
-for i in np.random.choice(post_pop.coords["sample"].size, size=1000):
-    ax.plot(
-        idata.posterior.coords["month"],
-        post_pop.isel(sample=i),
-        alpha=0.01,
-        color="blue",
-    )
-post_pop.mean("sample").plot(ax=ax, color="orange", lw=2)
-ax.set_ylabel("Popularity")
-ax.set_xlabel("Months into term");
+plot_latent_mu(idata)
 ```
 
-```python
-hdi_data = arviz.hdi(logistic(idata.posterior["mu"]))
-ax = arviz.plot_hdi(idata.posterior.coords["month"], hdi_data=hdi_data)
-ax.vlines(
-    idata.posterior.coords["month"],
-    hdi_data.sel(hdi="lower")["mu"],
-    hdi_data.sel(hdi="higher")["mu"],
-)
-post_pop.median("sample").plot(ax=ax);
-```
+This is better! We can see why the model is more comfortable: the Beta-Binomial likelihood give it more flexibility, as exemplified in the more wiggly posterior predictions, which also increases the uncertainty of the predictions.
 
-This is much better! It is unlikely we would be able to do much better than this for the unpooled model; maybe by having one dispersion term per term/month. But since we wish to switch to a partially pooled model for $\mu$ we will stop our investigation on the fully pooled model for now.
+Still, this is not very satisfactory. The main limit of this model is that it doesn't distinguish between presidents -- it pools all of them -- although they all have differences despite being similar in some ways. As a result, it is unlikely we would be able to do much better than this for the pooled model; maybe by having one dispersion term per term/month? 
 
+I don't know about you, but each time I hear "similar but different", I immediately think of a hiearchical (i.e partially pooled) model (yeah, I'm weird sometimes). Well, that's exactly what we're going to investigate next!
 
 ### Hierarchical model
+
+The main change is that now our `month_effect` will become a `month_president_effect`, and we'll have a common monthly mean for all presidents (which will be our new `month_effect`. A nice feature is that `sigma_mu` can now be interpreted as the shrinkage parameter of the random walk: the closest to zero it will be inferred to be, the more similar the presidents will be considered in their monthly popularity evolution. That's why we'll rename this parameter `shrinkage_pop`. Finally, the house effects stay unpooled, as they were before.
+
+Let's code that up and sample!
 
 ```python
 president_id, presidents = data["president"].factorize(sort=False)
@@ -544,14 +514,10 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
         dims=("president", "month"),
     )
 
-    popularity = pm.Deterministic(
-        "popularity",
-        pm.math.invlogit(
+    popularity = pm.math.invlogit(
             month_president_effect[president_id, month_id]
             + house_effect[pollster_by_method_id]
-        ),
-        dims="observation",
-    )
+        )
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -560,20 +526,19 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
         observed=data["num_approve"],
         dims="observation",
     )
-```
-
-```python
-with hierarchical_popularity:
+    
     idata = pm.sample(return_inferencedata=True)
 ```
 
-Mmmh, that doesn't sample because we get zero derivates for some variables... Let's check the model's test point:
+Uh-oh, our model doesn't sample... Apparently we've got zero derivates for some variables, whatever that means! Usually, this is due to missing values somewhere (which leads to -infinity log-probabilities), or just to some misspecification in the model (yep, life is complicated, we've got to accept it). A first step then is to check the model's test point and see whether we've got any -inf in there:
 
 ```python
 hierarchical_popularity.check_test_point()
 ```
 
-Interesting: the problem doesn't come from a -inf test point or from missing values in the data -- the problem really comes from the model. A safe bet here is to try and reparametrize the model with a non-centered parametrization:
+Nope, everything looks good. So, the the problem doesn't come from missing values in the data but certainly from the model specification itself. We've checked, and there is no typo in the code above. A safe bet here is that the current parametrization (very poorly called "centered" parametrization) is somehow presenting the MCMC sampler with a vexing geometry. A common trick is to switch to a "non-centered parametrization", where `month_effect` and `shrinkage_pop` are estimated independently from `month_president_effect`, as you'll see in the code below.
+
+This trick is a bit weird if that's the first time you're encountering it, so you can take a look at [this blog post](https://twiecki.io/blog/2017/02/08/bayesian-hierchical-non-centered/) for further explanation.
 
 ```python
 with pm.Model(coords=COORDS) as hierarchical_popularity:
@@ -589,14 +554,10 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
         dims=("president", "month"),
     )
 
-    popularity = pm.Deterministic(
-        "popularity",
-        pm.math.invlogit(
+    popularity = pm.math.invlogit(
             month_president_effect[president_id, month_id]
             + house_effect[pollster_by_method_id]
-        ),
-        dims="observation",
-    )
+        )
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -609,13 +570,13 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
     idata = pm.sample(return_inferencedata=True)
 ```
 
-So our sampling problem indeed came from a challenging geometry when the model was parametrized with the centered parametrization. Switching to a non-centered one fixed it. Now, do our estimates make sense?
+Yep, that was it! Feels like magic, doesn't it? Each time I just switch from a centered to a non-centered parametrization and it just starts sampling, I am amazed!
+
+We only got a small warning about effective sample size, so we expect the trace plot to look good. But do our estimates make sense?
 
 ```python
 arviz.plot_trace(
     idata,
-    var_names=["~popularity", "~rw"],
-    filter_vars="regex",
 );
 ```
 
@@ -631,8 +592,6 @@ In other words, a Gaussian random walk is just a cumulative sum, where we add a 
 
 Finally, it's probably useful to add a `president_effect`: it's very probable that some presidents are just more popular than others, even when taking into account the cyclical temporal variations.
 
-Let's code that up!
-
 ```python
 COORDS["month_minus_origin"] = COORDS["month"][1:]
 ```
@@ -642,9 +601,9 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
 
     baseline = pm.Normal("baseline")
     president_effect = pm.Normal("president_effect", sigma=0.15, dims="president")
-    house_effect = pm.Normal("house_effect", 0, 0.15, dims="pollster_by_method")
+    house_effect = pm.Normal("house_effect", 0.15, dims="pollster_by_method")
 
-    month_effect = pm.Normal("month_effect", 0, 0.15, dims="month")
+    month_effect = pm.Normal("month_effect", 0.15, dims="month")
     # need the cumsum parametrization to properly control the init of the GRW
     rw_init = aet.zeros(shape=(len(COORDS["president"]), 1))
     rw_innovations = pm.Normal(
@@ -657,17 +616,13 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
         "month_president_effect", raw_rw * sd, dims=("president", "month")
     )
 
-    popularity = pm.Deterministic(
-        "popularity",
-        pm.math.invlogit(
+    popularity = pm.math.invlogit(
             baseline
             + president_effect[president_id]
             + month_effect[month_id]
             + month_president_effect[president_id, month_id]
             + house_effect[pollster_by_method_id]
-        ),
-        dims="observation",
-    )
+        )
 
     N_approve = pm.Binomial(
         "N_approve",
@@ -680,10 +635,12 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
     idata = pm.sample(return_inferencedata=True)
 ```
 
+No warnings whatsoever! Who would have thought that adding a simple intercept would help that much! Let's look at our expectedly beautiful trace plot 🤩
+
 ```python
 arviz.plot_trace(
     idata,
-    var_names=["~popularity", "~rw"],
+    var_names="~rw",
     filter_vars="regex",
 );
 ```
@@ -692,9 +649,9 @@ That looks much better, doesn't it? Now we do see a difference in the different 
 
 We could stop there, but, for fun, let's improve this model even further by:
 
-1. Use a Beta-Binomial likelihood. We already saw in the completely pooled model that it improves fit and convergence a lot. Plus, it makes scientific sense: for a lot of reasons, each poll probably has a different true Binomial probability than all the other ones -- even when it comes from the same pollster; just think about measurement errors or the way the sample is different each time. Here, we parametrize the Beta-Binomial by its mean and precision, instead of the classical $\alpha$ and $\beta$ parameters. For more details about this distribution and parametrization, see [this blog post](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html#Build-me-a-model).
+1. Using a Beta-Binomial likelihood. We already saw in the completely pooled model that it improves fit and convergence a lot. Plus, it makes scientific sense: for a lot of reasons, each poll probably has a different true Binomial probability than all the other ones -- even when it comes from the same pollster; just think about measurement errors or the way the sample is different each time. Here, we parametrize the Beta-Binomial by its mean and precision, instead of the classical $\alpha$ and $\beta$ parameters. For more details about this distribution and parametrization, see [this blog post](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html#Build-me-a-model).
 
-2. Make sure that our different effects sum to zero. Think about the month effect. It only makes sense in a relative sense: some months are better than average, some other are worse, but you can't have _only_ good months -- they'd be good compared to what? So we want to make sure that the average month effect is 0, while allowing each month to be better or worse than average if needed. To do that, we use a Normal distribution whose dimensions are constrained to sum to zero. In PyMC, we can use the `ZeroSumNormal` distribution, that [Adrian Seyboldt](https://github.com/aseyboldt) contributed and kindly shared with us.
+2. Making sure that our different effects sum to zero. Think about the month effect. It only makes sense in a relative sense: some months are better than average, some others are worse, but you can't have _only_ good months -- they'd be good compared to what? So we want to make sure that the average month effect is 0, while allowing each month to be better or worse than average if needed. To do that, we use a Normal distribution whose last axis is constrained to sum to zero. In PyMC, we can use the `ZeroSumNormal` distribution, that [Adrian Seyboldt](https://github.com/aseyboldt) contributed and kindly shared with us.
 
 Ok, enough talking, let's code!
 
@@ -780,17 +737,13 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
         "month_president_effect", raw_rw * sd, dims=("president", "month")
     )
 
-    popularity = pm.Deterministic(
-        "popularity",
-        pm.math.invlogit(
+    popularity = pm.math.invlogit(
             baseline
-            president_effect[president_id]
+            + president_effect[president_id]
             + month_effect[month_id]
             + month_president_effect[president_id, month_id]
             + house_effect[pollster_by_method_id]
-        ),
-        dims="observation",
-    )
+        )
 
     # overdispersion parameter
     theta = pm.Exponential("theta_offset", 1.0) + 10.0
@@ -803,7 +756,7 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
         observed=data["num_approve"],
         dims="observation",
     )
-#pm.model_to_graphviz(hierarchical_popularity)
+pm.model_to_graphviz(hierarchical_popularity)
 ```
 
 ```python
@@ -811,10 +764,12 @@ with hierarchical_popularity:
     idata = pm.sample(return_inferencedata=True)
 ```
 
+Sampling was lightning fast, with a 4x improvement over our previous model! And we don't have any warnings, aka the best of both worlds.
+
 ```python
 arviz.plot_trace(
     idata,
-    var_names=["~popularity", "~truncated", "~rw_innovations"],
+    var_names=["~truncated", "~rw_innovations"],
     filter_vars="regex",
     compact=True,
 );
@@ -824,10 +779,12 @@ arviz.plot_trace(
 arviz.summary(
     idata,
     round_to=2,
-    var_names=["~popularity", "~truncated", "~rw_innovations"],
+    var_names=["~truncated", "~rw_innovations"],
     filter_vars="regex",
 )
 ```
+
+
 
 ```python
 mean_house_effect = (
@@ -837,19 +794,19 @@ mean_house_effect.round(2)
 ```
 
 ```python
-ax = mean_house_effect.plot.bar(figsize=(14, 8), rot=30)
+ax = mean_house_effect.plot.bar(figsize=(14, 7), rot=30)
 ax.set_title("$>0$ bias means (pollster, method) overestimates the latent popularity");
 ```
 
 ```python
-fig, axes = plt.subplots(2, 2, figsize=(14, 10), sharex=True, sharey=True)
+fig, axes = plt.subplots(2, 2, figsize=(14, 8), sharex=True, sharey=True)
 
 for ax, p in zip(axes.ravel(), idata.posterior.coords["president"]):
     post = idata.posterior.sel(president=p)
     post_pop = logistic(
         (
-            #post["baseline"]
-            post["president_effect"]
+            post["baseline"]
+            + post["president_effect"]
             + post["month_effect"]
             + post["month_president_effect"]
         ).stack(sample=("chain", "draw"))
@@ -863,32 +820,35 @@ for ax, p in zip(axes.ravel(), idata.posterior.coords["president"]):
     )
     ax.set_ylabel("Latent popularity")
     ax.set_xlabel("Months into term")
+    
+
+    if overlay_observed:
+        obs_mean = data.groupby(["president", "month_id"]).last()["p_approve_mean"].unstack().T
+        for president in obs_mean.columns:
+            ax.plot(obs_mean.index, obs_mean[president], "o", alpha=0.3, label=f"obs. monthly {president}")
 ```
 
 ```python
 with hierarchical_popularity:
-    predictives = pm.sample_posterior_predictive(idata)
+    idata.extend(
+        arviz.from_pymc3(
+            posterior_predictive=pm.sample_posterior_predictive(idata),
+        )
+    )
 ```
 
 ```python
-data['p_approve_predicted'] = np.mean(predictives['N_approve'], axis=0) / data["samplesize"]
-```
+predicted_approval_rates = idata.posterior_predictive.mean(("chain", "draw"))["N_approve"] / data["samplesize"]
+dates = predicted_approval_rates.field_date
 
-```python
-predicted_approval_rates = data["p_approve_predicted"].values
-approval_rates = data["p_approve"].values
-newterm_dates = data.reset_index().groupby("president").first()["field_date"].values
-
-dates = data.field_date
-
-fig, ax = plt.subplots(figsize=(12, 8))
+fig, ax = plt.subplots(figsize=(12, 4))
+ax.plot(dates, data["p_approve"].values, "o", color="k", alpha=0.5, label="observed")
 ax.plot(dates, predicted_approval_rates, "o", alpha=0.5, label="predicted")
-ax.plot(dates, approval_rates, "o", alpha=0.5, label="observed")
-ax.set_ylim(0, 1)
-ax.set_ylabel("Does approve")
+ax.set_ylim(0.1, 0.8)
+ax.set_title("Posterior Predictive Approval Rate")
+ax.legend()
 for date in newterm_dates:
-    ax.axvline(date)
-fig.legend();
+    ax.axvline(date, color="k", alpha=0.6, linestyle="--")
 ```
 
 ## TODO

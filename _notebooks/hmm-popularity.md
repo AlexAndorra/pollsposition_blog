@@ -313,6 +313,7 @@ month_id = np.hstack(
     ]
 )
 months = np.arange(max(month_id) + 1)
+data["month_id"] = month_id
 ```
 
 ```python
@@ -469,7 +470,7 @@ plot_latent_mu(idata)
 
 The posterior variance of the values of $\mu$ still is grossly underestimated; between month 40 and 50 presidents have had popularity rates between 0.2 and 0.4, while here the popularity is estimated to be around 0.21 plus or minus 0.02 at best. We need to fhix this.
 
-### A model that accounts for the overdispersion of polls
+### Accounting for overdispersion in polls
 
 As we saw with the previous model, the variance of $\mu$'s posterior values is grossly underestimated. This comes from at least two things:
 
@@ -525,7 +526,7 @@ Still, this is not very satisfactory. The main limit of this model is that it do
 
 I don't know about you, but each time I hear "similar but different", I immediately think of a hiearchical (i.e partially pooled) model (yeah, I'm weird sometimes). Well, that's exactly what we're going to investigate next!
 
-### Hierarchical model
+## Respect the hierarchy
 
 The main change is that now our `month_effect` will become a `month_president_effect`, and we'll have a common monthly mean for all presidents (which will be our new `month_effect`. A nice feature is that `sigma_mu` can now be interpreted as the shrinkage parameter of the random walk: the closest to zero it will be inferred to be, the more similar the presidents will be considered in their monthly popularity evolution. That's why we'll rename this parameter `shrinkage_pop`. Finally, the house effects stay unpooled, as they were before.
 
@@ -821,6 +822,8 @@ arviz.summary(
 )
 ```
 
+## Posterior predictions
+
 And now let's do something new! Let's visualize the posterior estimates of the house effects. We'll plot the mean value for each `(pollster, method)` pair. Remember, a _positive_ house effect means the given pair tend to _overestimate_ the latent popularity:
 
 ```python
@@ -917,7 +920,7 @@ for date in newterm_dates:
 
 These are really good predictions 😲 ! The model has very little trouble tracking the evolution and variation of each president's popularity, so we can be happy with ourselves. Interestingly though, we still see this tendency of the model to slightly underestimate the variation in raw polls, especially when big, sudden shifts in opinion happen, as we already mentioned. Although we don't want to _exactly_ replicate the observed data (some polls really are outliers and that's good that the model doesn't overfit), it would be interesting to see if the model can be further improved in this respect.
 
-And that, ladies and gentlemen, was our workflow for a Bayesian hidden Markov model of 🇫🇷 presidents' popularity! We hope you enjoyed it, and feel free to comment below or reach out for any comments or suggestions. By the way, what do you think of this model? Are you surprised that French people tend to dislike their presidents?
+And that, ladies and gentlemen, was our workflow for a Bayesian hidden Markov model of 🇫🇷 presidents' popularity! We hope you enjoyed it, and feel free to comment below or [reach out](https://twitter.com/alex_andorra) for any comments or suggestions. By the way, what do you think of this model? Are you surprised that French people tend to dislike their presidents?
 
 ![MicDropUrl](https://media.giphy.com/media/3o7qDEq2bMbcbPRQ2c/giphy.gif)
 

@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.11.0
+      jupytext_version: 1.11.1
   kernelspec:
     display_name: elections-models
     language: python
@@ -296,9 +296,9 @@ random events that can happen during the term.
 
 ### Hidden Mark What ?
 
-Thus defined, our model is a *Hidden Markov Model* (HMM). Hidden Markov Model are big words to describe a simple concept: a model where a "hidden" state jumps from one time step to another and where the observations are a function of this hidden state. Hidden states have no memory, in the sense that their value at any time step only depends on the value of the state at the previous time step. That's what *markovian* means.
+Thus defined, our model is a *Hidden Markov Model* (HMM). This is a big and scary word to describe what is actually a simple concept (tip: this is a common technique to make us statisticians look cool and knowledgeable): a model where a "hidden" state jumps from one time step to another and where the observations are a function of this hidden state. Hidden states have no memory, in the sense that their value at any time step only depends on the value of the state at the previous time step. That's what *markovian* means.
 
-Here, the hidden state is the latent popularity $\mu_m$ and we combine it with the effects $\alpha_k$ and $\zeta_i$ to compute the value of the observed states, the polls' results $y_{i,m}$. The value of the latent popularity at month $m$ only depends on its value at $m-1$, and the jumps between months are normally distributed.
+Here, the hidden state is the latent popularity $\mu_m$ and we combine it with the effects $\alpha_k$ and $\zeta_j$ to compute the value of the observed states, the polling results $y_{i,m}$. The value of the latent popularity at month $m$ only depends on its value at $m-1$, and the jumps between months are normally distributed.
 
 ```python
 # hide

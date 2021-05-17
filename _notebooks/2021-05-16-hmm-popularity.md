@@ -6,15 +6,15 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.11.1
+      jupytext_version: 1.11.0
   kernelspec:
-    display_name: elections-models
+    display_name: pollposition
     language: python
-    name: elections-models
+    name: pollposition
 ---
 
 # Popularity hide and seek
-> "A hidden Markov model to estimate latent presidential popularity across time"
+> "Estimate latent presidential popularity across time with a Markov chain"
 
 - toc: true
 - badges: true
@@ -24,7 +24,7 @@ jupyter:
 - image: images/hmm-popularity.png
 
 
-A few months ago, [I experimented with a Gaussian Process](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html) to estimate the popularity of French presidents across time. The experiment was really positive, and helped me get familiar with the beauty of GPs. This time, I teamed up with [Rémi Louf](https://twitter.com/remilouf) on a [hidden Markov model](https://en.wikipedia.org/wiki/Hidden_Markov_model) to estimate the same process -- what is the true latent popularity, that we only observe through the noisy data that are polls?
+A few months ago, [I experimented with a Gaussian Process](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html) to estimate the popularity of French presidents across time. The experiment was really positive, and helped me get familiar with the beauty of GPs. This time, I teamed up with [Rémi Louf](https://twitter.com/remilouf) on a [Markov Chain](https://en.wikipedia.org/wiki/Markov_chain) model to estimate the same process -- what is the true latent popularity, that we only observe through the noisy data that are polls?
 
 This was supposed to be a trial run before working on an electoral model for the coming regional elections in France -- it's always easier to start with 2 dimensions than 6, right? But the model turned out to be so good at smoothing and predicting popularity data that we thought it'd be a shame not to share it. And voilà!
 
@@ -294,9 +294,9 @@ For the sake of simplicity, we choose not to account at first for a natural
 decline in popularity $\delta$, the unmeployment at month $m$, or
 random events that can happen during the term. 
 
-### Hidden Mark What ?
+### Mark What ?
 
-Thus defined, our model is a *Hidden Markov Model* (HMM). This is a big and scary word to describe what is actually a simple concept (tip: this is a common technique to make us statisticians look cool and knowledgeable): a model where a "hidden" state jumps from one time step to another and where the observations are a function of this hidden state. Hidden states have no memory, in the sense that their value at any time step only depends on the value of the state at the previous time step. That's what *markovian* means.
+Thus defined, our model is a *Markov Model*. This is a big and scary word to describe what is actually a simple concept (tip: this is a common technique to make us statisticians look cool and knowledgeable): a model where a "hidden" state jumps from one time step to another and where the observations are a function of this hidden state. Hidden states have no memory, in the sense that their value at any time step only depends on the value of the state at the previous time step. That's what *markovian* means.
 
 Here, the hidden state is the latent popularity $\mu_m$ and we combine it with the effects $\alpha_k$ and $\zeta_j$ to compute the value of the observed states, the polling results $y_{i,m}$. The value of the latent popularity at month $m$ only depends on its value at $m-1$, and the jumps between months are normally distributed.
 
@@ -938,7 +938,7 @@ for date in newterm_dates:
 
 These are really good predictions 😲 ! The model has very little trouble tracking the evolution and variation of each president's popularity, so we can be happy with ourselves. Interestingly though, we still see this tendency of the model to slightly underestimate the variation in raw polls, especially when big, sudden shifts in opinion happen, as we already mentioned. Although we don't want to _exactly_ replicate the observed data (some polls really are outliers and that's good that the model doesn't overfit), it would be interesting to see if the model can be further improved in this respect.
 
-And that, ladies and gentlemen, was our workflow for a Bayesian hidden Markov model of 🇫🇷 presidents' popularity! We hope you enjoyed it, and feel free to comment below or [reach out](https://twitter.com/alex_andorra) for any comments or suggestions. By the way, what do you think of this model? Are you surprised that French people tend to dislike their presidents?
+And that, ladies and gentlemen, was our workflow for modeling the evolution of 🇫🇷 presidents' popularity as a Markov chain! We hope you enjoyed it, and feel free to comment below or [reach out](https://twitter.com/alex_andorra) for any comments or suggestions. By the way, what do you think of this model? Are you surprised that French people tend to dislike their presidents?
 
 ![MicDropUrl](https://media.giphy.com/media/3o7qDEq2bMbcbPRQ2c/giphy.gif)
 

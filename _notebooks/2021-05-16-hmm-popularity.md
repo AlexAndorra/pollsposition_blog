@@ -108,11 +108,11 @@ doesnotrespond = 1 - approval_rates - disapproval_rates
 newterm_dates = data.reset_index().groupby("president").first()["index"].values
 dates = data.index
 
-fig, axes = plt.subplots(3, figsize=(12, 8))
+fig, axes = plt.subplots(2, figsize=(12, 6))
 for ax, rate, label in zip(
     axes.ravel(),
-    [approval_rates, disapproval_rates, doesnotrespond],
-    ["Approve", "Disapprove", "No answer"],
+    [approval_rates, doesnotrespond],
+    ["Approve", "No answer"],
 ):
     ax.plot(dates, rate, "o", alpha=0.4)
     ax.set_ylim(0, 1)
@@ -157,7 +157,7 @@ for date in newterm_dates:
     ax.axvline(date, color="k", alpha=0.6, linestyle="--")
 ```
 
-There is a very high variance for Chirac's second term, and for the beggining of Macron's term. For Chirac's term, it seems like the difference stems from the polling method: face-to-face approval rates seem to be much lower. For Macron, this high variance is quite hard to explain. In any case, we'll probably have to take this overdispersion (as it's called in statistical linguo) of the data in our models...
+There is a very high variance for Chirac's second term, and for the beggining of Macron's term. For Chirac's term, it seems like the difference stems from the polling method: face-to-face approval rates seem to be much lower, as you can see in the figure below. For Macron, this high variance is quite hard to explain. In any case, we'll probably have to take this overdispersion (as it's called in statistical linguo) of the data in our models...
 
 ```python
 face = data[data["method"] == "face to face"]
@@ -254,7 +254,7 @@ Speaking of models, do you know what time it is? It's model time, of course!!
 
 ## Specifying the model
 
-We'll build several versions of our model, refining it incrementally. But the basic structure will remain the same. Let's build an abstract version that will help you undertand the code.
+We'll build several versions of our model, refining it incrementally. But the basic structure will remain the same. Let's build an abstract version that will help you understand the code.
 
 Each poll $i$ at month $m$ from the beginning of a president’s term finds that
 $y_i$ individuals have a positive opinion of the president’s action over
@@ -262,8 +262,8 @@ $n_i$ respondents. We model this as:
 
 $$y_{i,m} \sim Binomial(p_{i,m}, n_{i,m})$$
 
-We loosely call $p_{i,m}$ the *popularity* of the president, $m$ month into his
-presidency. This is the quantity we would like to model. Note that it's latent: we never get to observe it in the world.
+We loosely call $p_{i,m}$ the *popularity* of the president in poll $i$, $m$ months into his
+presidency.
 
 Why specify the month when the time information is already contained in the
 succession of polls? Because French people tend to be less and less satisfied
@@ -273,23 +273,25 @@ We model $p_{i,m}$ with a random walk logistic regression:
 
 $$p_{i,m} = logistic(\mu_m + \alpha_k + \zeta_j)$$
 
-$\mu_m$ is the underlying support for the president at month $m$. $\alpha_k$ is
-the bias of the pollster, while $\zeta_j$ is the inherent bias of the polling
+$\mu_m$ is the latent support for the president at month $m$ and it's the main quantity we would like to model.
+$\alpha_k$ is the bias of the pollster, while $\zeta_j$ is the inherent bias of the polling
 method. The biases are assumed to be completely unpooled at first, i.e we model
 one bias for each pollster and method:
 
-$$\alpha_k \sim Normal(0, \sigma_k)\qquad \forall pollster k$$
+$$\alpha_k \sim Normal(0, \sigma_k)\qquad \forall \, pollster \, k$$
 
 and 
 
-$$\zeta_j \sim Normal(0, \sigma_j)\qquad \forall method j$$
+$$\zeta_j \sim Normal(0, \sigma_j)\qquad \forall \, method \, j$$
 
 We treat the time variation of $\mu$ with a correlated random walk:
 
 $$\mu_m | \mu_{m-1} \sim Normal(\mu_{m-1}, \sigma_m)$$
 
+Again, note that $\mu$ is latent: we never get to observe it in the world.
+
 For the sake of simplicity, we choose not to account at first for a natural
-decline in popularity $\delta$, the unmeployment at month $m$, $U_m$, or
+decline in popularity $\delta$, the unmeployment at month $m$, or
 random events that can happen during the term. 
 
 ```python
@@ -330,7 +332,7 @@ COORDS = {
 Our first model is as simple as possible: just a random walk on the monthly latent popularity and a term for the bias of each `(pollster, method)` pair, which is called the "house effect" in the political science litterature. Also, we'll use a more descriptive name for $\mu$ -- `month_effect` sounds good, because, well, that's basically what it is. We'll arbitrarily fix the innovation of the random walk (`sigma`) to 1 and see how it fares.
 
 ```python
-with pm.Model(coords=COORDS) as pooled_popularity:
+with pm.Model(coords=COORDS) as pooled_popularity_simple:
 
     house_effect = pm.Normal("house_effect", 0, 0.15, dims="pollster_by_method")
     month_effect = pm.GaussianRandomWalk("month_effect", sigma=1.0, dims="month")
@@ -476,7 +478,7 @@ As we saw with the previous model, the variance of $\mu$'s posterior values is g
 
 1. Presidents have similarities, but also a lot of differences in how their popularity rates evolves with time. We should take that into account and estimate one trendline per president. We'll do that later.
 
-2. Even beyond president effects, it seems that there is much more variation in the data that a Binomial distribution expects (as is often the case with count data). This is called overdispersion of data in statistical linguo, and is due to the fact that the Binomial's variance depends on its mean. A convenient way to get around this limitation is to use a Beta-Binomial likelihood, to add one degree of freedom and allow the variance to be estimated independently from the mean value. For more details about this distribution and its parametrization, see [this blog post](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html#Build-me-a-model). In short, this allows each poll to have its own Binomial probability, which even makes sense scientifically: it's conceivable that each poll is different in several ways from the others (even when done by the same pollster), because there are measurement errors and other factors we did not include, even beyond pollsters' and method's biases.
+2. Even beyond president effects, it seems that there is much more variation in the data than a Binomial distribution can account for (as is often the case with count data). This is called overdispersion of data in statistical linguo, and is due to the fact that the Binomial's variance depends on its mean. A convenient way to get around this limitation is to use a Beta-Binomial likelihood, to add one degree of freedom and allow the variance to be estimated independently from the mean value. For more details about this distribution and its parametrization, see [this blog post](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html#Build-me-a-model). In short, this allows each poll to have its own Binomial probability, which even makes sense scientifically: it's conceivable that each poll is different in several ways from the others (even when done by the same pollster), because there are measurement errors and other factors we did not include, even beyond pollsters' and method's biases.
 
 ```python
 with pm.Model(coords=COORDS) as pooled_popularity:
@@ -689,7 +691,7 @@ We could stop there, but, for fun, let's improve this model even further by:
 
 1. Using a Beta-Binomial likelihood. We already saw in the completely pooled model that it improves fit and convergence a lot. Plus, it makes scientific sense: for a lot of reasons, each poll probably has a different true Binomial probability than all the other ones -- even when it comes from the same pollster; just think about measurement errors or the way the sample is different each time. Here, we parametrize the Beta-Binomial by its mean and precision, instead of the classical $\alpha$ and $\beta$ parameters. For more details about this distribution and parametrization, see [this blog post](https://alexandorra.github.io/pollsposition_blog/popularity/macron/gaussian%20processes/polls/2021/01/18/gp-popularity.html#Build-me-a-model).
 
-2. Making sure that our different effects sum to zero. Think about the month effect. It only makes sense in a relative sense: some months are better than average, some others are worse, but you can't have _only_ good months -- they'd be good compared to what? So we want to make sure that the average month effect is 0, while allowing each month to be better or worse than average if needed. To do that, we use a Normal distribution whose last axis is constrained to sum to zero. In PyMC, we can use the `ZeroSumNormal` distribution, that [Adrian Seyboldt](https://github.com/aseyboldt) contributed and kindly shared with us.
+2. Making sure that our different effects sum to zero. Think about the month effect. It only makes sense in a relative sense: some months are better than average, some others are worse, but you can't have _only_ good months -- they'd be good compared to what? So we want to make sure that the average month effect is 0, while allowing each month to be better or worse than average if needed. And the reasoning is the same for house effects for instance -- can you see why? To implement that, we use a Normal distribution whose last axis is constrained to sum to zero. In PyMC, we can use the `ZeroSumNormal` distribution, that [Adrian Seyboldt](https://github.com/aseyboldt) contributed and kindly shared with us.
 
 Ok, enough talking, let's code!
 
@@ -796,6 +798,16 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
     )
 pm.model_to_graphviz(hierarchical_popularity)
 ```
+
+Pssst, wanna see something funny? Let's plot the graphical representation of the very first model we tried in this study, to realize how far we've gotten since then:
+
+```python
+pm.model_to_graphviz(pooled_popularity_simple)
+```
+
+Well we don't know about you, but we find that funny 😂 And it's a great example of how statistical modeling happens in real life: small, incremental, error-filled steps, instead of big, giant, perfect steps -- so, in a nutshell, a delightfully miserable endeavor!
+
+Now, let's sample from this last model!
 
 ```python
 with hierarchical_popularity:

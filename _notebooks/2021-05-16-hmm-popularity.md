@@ -6,11 +6,11 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.11.0
+      jupytext_version: 1.11.1
   kernelspec:
-    display_name: pollposition
+    display_name: elections-models
     language: python
-    name: pollposition
+    name: elections-models
 ---
 
 # Popularity hide and seek
@@ -680,6 +680,8 @@ with pm.Model(coords=COORDS) as hierarchical_popularity:
 ```
 
 No warnings whatsoever! Who would have thought that adding a simple intercept would help that much! Let's look at our expectedly beautiful trace plot 🤩
+
+Note that sampling time went up though -- interesting 🤔
 
 ```python
 arviz.plot_trace(
